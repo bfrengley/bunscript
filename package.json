@@ -1,6 +1,5 @@
 {
   "name": "bunscript",
-  "module": "bunscript.ts",
   "bin": {
     "bunscript": "./bunscript.ts"
   },
@@ -13,8 +12,6 @@
   },
   "private": true,
   "scripts": {
-    "mkscript": "bun ./bunscript.ts new",
-    "lnscript": "bun ./bunscript.ts link",
     "fmt": "prettier --write *.ts scripts/*.ts"
   },
   "type": "module"
