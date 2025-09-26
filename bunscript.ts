@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+
 import { $ } from "bun";
 import util from "util";
 import { readdir } from "node:fs/promises";
@@ -138,7 +139,7 @@ async function linkscripts(): Promise<void> {
       continue;
     }
 
-    const source = absoluteScriptPath(script);
+    const source = path.join(SCRIPT_DIR, script);
     scripts.push(source);
   }
 
