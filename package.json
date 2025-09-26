@@ -4,7 +4,7 @@
     "bunscript": "./bunscript.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "1.2.22",
     "prettier": "^3.6.2"
   },
   "peerDependencies": {
