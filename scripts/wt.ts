@@ -8,7 +8,36 @@ import path from "node:path";
 
 function usage(): void {
   console.log(`\
-Usage: wt clone <git-url> [dest] - Clone git repo and set it up for worktrees`);
+Usage: wt <COMMAND> [OPTIONS] - Manage git worktrees.
+
+A wt-based git repo will have the following structure:
+- repo: The root directory. wt commands which deal with relative paths will consider them relative
+        to this directory (e.g., cp).
+  - .base/: The repo clone that is used as the base for the underlying \`git worktree\` commands.
+            Always checked out to an empty tree (i.e., it contains no files).
+  - .git/: A symlink to .base/.git. Allows the use of git commands in the root repo directory.
+  - .wt: The wt config file.
+  - (main/master)/: The default worktree which tracks the main branch of the repo. Detects the name
+                    automatically.
+  - <worktrees>/: Other worktrees, as they are created and removed.
+
+Commands:
+  clone GIT-URL [DEST] - Clone git repo and set it up for worktrees
+      DEST: If provided, the repo will be cloned to that location; otherwise, it will be cloned
+            into a directory as chosen by \`git clone <git-url>\`.
+
+  cp [--once|-o] [--link|-l] [SRC DEST]... - Copy files into all worktrees
+      --once|-o: Perform a one-off copy. Otherwise, a default copy action will be set up that will
+                 be executed for every new worktree (allowing you to automatically add ignored files
+                 or external files to every worktree).
+      --link|-l: Symlink the file rather than making a copy. All worktrees will share the file rather
+                 than having independent copies.
+      SRC: The location to copy from. Can be either a simple path or wt:worktree_name. If a worktree
+           name is provided, dest will be interpreted as both the path in that worktree to copy from
+           and the destination in each other worktree. Otherwise, the path to a file or directory.
+      DEST: The destination to copy to. MUST be a relative path, which is considered relative to
+            each worktree.
+`);
 }
 
 function usageError(): void {
@@ -36,10 +65,11 @@ try {
 }
 
 type SourceType<T extends string> = `wt:${T}` | `file:${T}`;
+type SharedFileSettings = { link?: boolean, source: SourceType<string> };
 
 interface WtConfig {
   baseBranch: string;
-  sharedFiles?: Record<string, { link?: boolean, source: SourceType<string> }>;
+  sharedFiles?: Record<string, SharedFileSettings>;
 }
 
 async function clone(args: string[]): Promise<void> {
@@ -103,13 +133,42 @@ async function cp(args: string[]): Promise<void> {
         type: "boolean",
         short: "l",
       },
+      once: {
+        type: "boolean",
+        short: "o",
+      },
     },
     strict: true,
     allowPositionals: true,
     args,
   });
 
+  if (positionals.length !== 0) {
+    if (positionals.length % 2 !== 0) {
+      console.error("unexpected number of arguments: arguments must be provided as [SRC DEST] pairs");
+      exit(2);
+    }
 
+    const files: Record<string, SharedFileSettings> = {};
+    for (let i = 0; i < positionals.length; i += 2) {
+      const src = positionals[i]!;
+      const dest = positionals[i + 1]!;
+
+      if (path.isAbsolute(dest)) {
+        console.error(`dest paths must be relative: "${dest}" is absolute`);
+        exit(2);
+      }
+
+      if (src.startsWith("wt:")) {
+        const tree = src.slice(3);
+        files[dest] = { link: values.link, source: `wt:${tree}` };
+      }
+    }
+
+    if (values.once) {
+      // just a simple copy
+    }
+  }
 }
 
 async function branchExists(branch: string): Promise<boolean> {
